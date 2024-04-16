@@ -21,6 +21,7 @@ import {
 } from './core';
 import { CheckResult, ProgressData } from './type';
 import { PushyContext } from './context';
+// import { setUserConfig, getUserConfig } from './userConfig';
 
 export const PushyProvider = ({
   client,

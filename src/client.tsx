@@ -26,6 +26,7 @@ const defaultServer = {
 
 const empty = {};
 const noop = () => {};
+const defaultTransform = (data: any) => data;
 
 export class Pushy {
   options: PushyOptions = {
@@ -35,6 +36,9 @@ export class Pushy {
     useAlert: true,
     strategy: 'both',
     logger: noop,
+    standardCheckUpdatePayload: defaultTransform,
+    standardCheckUpdateResponse: defaultTransform,
+    checkUpdateApiPath: '/checkUpdate',
   };
 
   lastChecking?: number;
@@ -48,9 +52,9 @@ export class Pushy {
   version = cInfo.pushy;
 
   constructor(options: PushyOptions) {
-    if (!options.appKey) {
-      throw new Error('appKey is required');
-    }
+    // if (!options.appKey) {
+    //   throw new Error('appKey is required');
+    // }
     this.setOptions(options);
   }
 
@@ -99,7 +103,7 @@ export class Pushy {
   };
 
   getCheckUrl = (endpoint: string = this.options.server!.main) => {
-    return `${endpoint}/checkUpdate/${this.options.appKey}`;
+    return `${endpoint}${this.options.checkUpdateApiPath}`;
   };
   assertHash = (hash: string) => {
     if (!this.downloadedHash) {
@@ -148,18 +152,21 @@ export class Pushy {
     }
     this.lastChecking = now;
     this.report({ type: 'checking' });
+    const payloadBody = {
+      packageVersion,
+      hash: currentVersion,
+      buildTime,
+      cInfo,
+    };
     const fetchPayload = {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        packageVersion,
-        hash: currentVersion,
-        buildTime,
-        cInfo,
-      }),
+      body: JSON.stringify(
+        this.options.standardCheckUpdatePayload(payloadBody),
+      ),
     };
     let resp;
     try {
@@ -197,8 +204,7 @@ export class Pushy {
         message: result.message,
       });
     }
-
-    return result;
+    return this.options.standardCheckUpdateResponse(result);
   };
   getBackupEndpoints = async () => {
     const { server } = this.options;
